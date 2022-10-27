@@ -35,7 +35,7 @@ public class ExcelData {
 //    private String plant_humid;
 //
 //    @Column(nullable = true)
-//    private String plant_level_code;
+//    private String plant_level_code12;
 //
 //    @Column(nullable = true)
 //    private String plant_place_code;
