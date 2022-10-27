@@ -1,0 +1,38 @@
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css">
+</head>
+<body>
+<table class="table table-striped">
+    <thead>
+    <tr>
+        <th scope="col">date</th>
+        <th scope="col">terminal_price</th>
+        <th scope="col">opening_price</th>
+        <th scope="col">transactions</th>
+        <th scope="col">changes</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="data : ${datas}" >
+        <td scope="row" th:text="${data.date}"></td>
+        <td th:text="${data.terminal_price}"></td>
+        <td th:text="${data.opening_price}"></td>
+        <td th:text="${data.transactions}"></td>
+        <td th:text="${data.changes}"></td>
+<!--        <td th:text="${data.plant_place_code}"></td>-->
+<!--        <td th:text="${data.plant_type_code}"></td>-->
+<!--        <td th:text="${data.water_cycle_spring_code}"></td>-->
+<!--        <td th:text="${data.water_cycle_summer_code}"></td>-->
+<!--        <td th:text="${data.water_cycle_autumn_code}"></td>-->
+<!--        <td th:text="${data.water_cycle_winter_code}"></td>-->
+
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
