@@ -5,16 +5,20 @@ import com.project.SoyouCrypto.login.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
 public class DataService {
 
-    private final OutputIndexRepository outputIndexRepository;
+    private final MomentumOutputIndexRepository momentumOutputIndexRepository;
+    private final StableOutputIndexRepository stableOutputIndexRepository;
     private final MomentumDataAllRepository momentumDataAllRepository;
     private final MomentumData1YRepository momentumData1YRepository;
     private final MomentumData6MRepository momentumData6MRepository;
@@ -24,7 +28,7 @@ public class DataService {
     private final StableData6MRepository stableData6MRepository;
     private final StableData3MRepository stableData3MRepository;
 
-// 그래프 데이터 반환
+    // 그래프 데이터 반환
     public Object getMomentumGraphData(String type) {
         switch (type) {
             case "MOMENTUMALL":
@@ -36,7 +40,7 @@ public class DataService {
             default:
                 return momentumData3MRepository.findAll(Sort.by(Sort.Direction.ASC, "time"));
         }
-        }
+    }
 
     // 그래프 데이터 반환
     public Object getStableGraphData(String type) {
@@ -52,20 +56,44 @@ public class DataService {
         }
     }
 
-    public OutputIndex getPortfolioIndex(String type) {
+    public MomentumOutputIndex getMomentumPortfolioIndex(String type) {
         System.out.println("Calc2 함수 호출");
-        Optional<OutputIndex> momentumIndexAll = outputIndexRepository.findByIndexType(type);
+        Optional<MomentumOutputIndex> momentumIndex = momentumOutputIndexRepository.findByIndexType(type);
         double cumReturn = 0;
         double dailyAvg = 0;
         double dailySharp = 0;
         double mdd = 0;
-        if (momentumIndexAll.isPresent()) {
-            cumReturn = Math.round(momentumIndexAll.get().getCumReturn() * 100);
-            dailyAvg = (Math.round(momentumIndexAll.get().getDailyAvg() * 10000) / 100.0);
-            dailySharp = (Math.round(momentumIndexAll.get().getDailySharp() * 100) / 100.0);
-            mdd = Math.round(momentumIndexAll.get().getMdd() * 100);
+        LocalDateTime uploadTime = null;
+        if (momentumIndex.isPresent()) {
+            cumReturn = Math.round(momentumIndex.get().getCumReturn() * 100);
+            dailyAvg = (Math.round(momentumIndex.get().getDailyAvg() * 10000) / 100.0);
+            dailySharp = (Math.round(momentumIndex.get().getDailySharp() * 100) / 100.0);
+            mdd = Math.round(momentumIndex.get().getMdd() * 100);
+            uploadTime = momentumIndex.get().getUploadTime();
         }
-        OutputIndex roundedIndex = new OutputIndex("OUTPUT", cumReturn, dailyAvg, dailySharp, mdd);
+        MomentumOutputIndex roundedIndex = new MomentumOutputIndex("OUTPUT", cumReturn, dailyAvg, dailySharp, mdd, uploadTime);
+        return roundedIndex;
+    }
+
+    public StableOutputIndex getStablePortfolioIndex(String type) {
+        System.out.println("stableIndex 함수 호출");
+        System.out.println("stableIndex 함수 종류"+ type);
+        Optional<StableOutputIndex> stableIndex = stableOutputIndexRepository.findByIndexType(type);
+        System.out.println("값은?"+stableIndex);
+        double cumReturn = 0;
+        double dailyAvg = 0;
+        double dailySharp = 0;
+        double mdd = 0;
+        LocalDateTime uploadTime = null;
+        if (stableIndex.isPresent()) {
+            cumReturn = Math.round(stableIndex.get().getCumReturn() * 100);
+            dailyAvg = (Math.round(stableIndex.get().getDailyAvg() * 10000) / 100.0);
+            dailySharp = (Math.round(stableIndex.get().getDailySharp() * 100) / 100.0);
+            mdd = Math.round(stableIndex.get().getMdd() * 100);
+            uploadTime = stableIndex.get().getUploadTime();
+        }
+        StableOutputIndex roundedIndex = new StableOutputIndex("OUTPUT", cumReturn, dailyAvg, dailySharp, mdd, uploadTime);
+        System.out.println("전달은?"+ roundedIndex);
         return roundedIndex;
     }
 
@@ -88,7 +116,7 @@ public class DataService {
         for (int i = 1; i < endDayId; i++) {
             momentumData1YRepository.deleteById(i);
         }
-        }
+    }
 
     //     6M 데이터 기간에 맞게 자르기
     public void momentumDataTrim6M() throws ParseException {
@@ -185,8 +213,9 @@ public class DataService {
         // 표준편차 구할때는 dataSize-1 이 됐다. 아마 표본이라 그런듯?
         double dailyAvgStd = (Math.round((Math.sqrt((sumOfDailyReturnSquare / (dataSize - 1)) - (dailyAvg * dailyAvg))) * 1000000)) / 1000000.0;
         double dailySharp = (Math.round((dailyAvg / dailyAvgStd) * 1000000)) / 1000000.0;
-        OutputIndex momentumIndexAll = new OutputIndex("MOMENTUMALL", cumReturn, dailyAvg, dailySharp, mdd);
-        outputIndexRepository.save(momentumIndexAll);
+
+        MomentumOutputIndex momentumIndexAll = new MomentumOutputIndex("MOMENTUMALL", cumReturn, dailyAvg, dailySharp, mdd, LocalDateTime.now());
+        momentumOutputIndexRepository.save(momentumIndexAll);
     }
 
     // 1Y data 가공
@@ -244,8 +273,8 @@ public class DataService {
         // 표준편차 구할때는 dataSize-1 이 됐다. 아마 표본이라 그런듯?
         double dailyAvgStd = (Math.round((Math.sqrt((sumOfDailyReturnSquare / (dataSize - 1)) - (dailyAvg * dailyAvg))) * 1000000)) / 1000000.0;
         double dailySharp = (Math.round((dailyAvg / dailyAvgStd) * 1000000)) / 1000000.0;
-        OutputIndex momentumIndex1Y = new OutputIndex("MOMENTUM1Y", cumReturn, dailyAvg, dailySharp, mdd);
-        outputIndexRepository.save(momentumIndex1Y);
+        MomentumOutputIndex momentumIndex1Y = new MomentumOutputIndex("MOMENTUM1Y", cumReturn, dailyAvg, dailySharp, mdd);
+        momentumOutputIndexRepository.save(momentumIndex1Y);
     }
 
     // 6M data 가공
@@ -303,9 +332,9 @@ public class DataService {
         // 표준편차 구할때는 dataSize-1 이 됐다. 아마 표본이라 그런듯?
         double dailyAvgStd = (Math.round((Math.sqrt((sumOfDailyReturnSquare / (dataSize - 1)) - (dailyAvg * dailyAvg))) * 1000000)) / 1000000.0;
         double dailySharp = (Math.round((dailyAvg / dailyAvgStd) * 1000000)) / 1000000.0;
-        OutputIndex momentumIndex6M = new OutputIndex("MOMENTUM6M", cumReturn, dailyAvg, dailySharp, mdd);
+        MomentumOutputIndex momentumIndex6M = new MomentumOutputIndex("MOMENTUM6M", cumReturn, dailyAvg, dailySharp, mdd);
 //        OutputIndex momentumIndex6M = new OutputIndex("MOMENTUM6M", cumReturn, (Math.round(dailyAvg*1000000))/1000000.0, (Math.round(dailySharp*1000000))/1000000.0, mdd);
-        outputIndexRepository.save(momentumIndex6M);
+        momentumOutputIndexRepository.save(momentumIndex6M);
     }
 
     // 3M data 가공
@@ -363,8 +392,8 @@ public class DataService {
         // 표준편차 구할때는 dataSize-1 이 됐다. 아마 표본이라 그런듯?
         double dailyAvgStd = (Math.round((Math.sqrt((sumOfDailyReturnSquare / (dataSize - 1)) - (dailyAvg * dailyAvg))) * 1000000)) / 1000000.0;
         double dailySharp = (Math.round((dailyAvg / dailyAvgStd) * 1000000)) / 1000000.0;
-        OutputIndex momentumIndex3M = new OutputIndex("MOMENTUM3M", cumReturn, dailyAvg, dailySharp, mdd);
-        outputIndexRepository.save(momentumIndex3M);
+        MomentumOutputIndex momentumIndex3M = new MomentumOutputIndex("MOMENTUM3M", cumReturn, dailyAvg, dailySharp, mdd);
+        momentumOutputIndexRepository.save(momentumIndex3M);
     }
 
     // StableData 해당 함수들
@@ -477,8 +506,8 @@ public class DataService {
         // 표준편차 구할때는 dataSize-1 이 됐다. 아마 표본이라 그런듯?
         double dailyAvgStd = (Math.round((Math.sqrt((sumOfDailyReturnSquare / (dataSize - 1)) - (dailyAvg * dailyAvg))) * 1000000)) / 1000000.0;
         double dailySharp = (Math.round((dailyAvg / dailyAvgStd) * 1000000)) / 1000000.0;
-        OutputIndex stableIndexAll = new OutputIndex("STABLEALL", cumReturn, dailyAvg, dailySharp, mdd);
-        outputIndexRepository.save(stableIndexAll);
+        StableOutputIndex stableIndexAll = new StableOutputIndex("STABLEALL", cumReturn, dailyAvg, dailySharp, mdd, LocalDateTime.now());
+        stableOutputIndexRepository.save(stableIndexAll);
     }
 
     // 1Y data 가공
@@ -532,8 +561,8 @@ public class DataService {
         // 표준편차 구할때는 dataSize-1 이 됐다. 아마 표본이라 그런듯?
         double dailyAvgStd = (Math.round((Math.sqrt((sumOfDailyReturnSquare / (dataSize - 1)) - (dailyAvg * dailyAvg))) * 1000000)) / 1000000.0;
         double dailySharp = (Math.round((dailyAvg / dailyAvgStd) * 1000000)) / 1000000.0;
-        OutputIndex stableIndex1Y = new OutputIndex("STABLE1Y", cumReturn, dailyAvg, dailySharp, mdd);
-        outputIndexRepository.save(stableIndex1Y);
+        StableOutputIndex stableIndex1Y = new StableOutputIndex("STABLE1Y", cumReturn, dailyAvg, dailySharp, mdd);
+        stableOutputIndexRepository.save(stableIndex1Y);
     }
 
     // 6M data 가공
@@ -587,8 +616,8 @@ public class DataService {
         // 표준편차 구할때는 dataSize-1 이 됐다. 아마 표본이라 그런듯?
         double dailyAvgStd = (Math.round((Math.sqrt((sumOfDailyReturnSquare / (dataSize - 1)) - (dailyAvg * dailyAvg))) * 1000000)) / 1000000.0;
         double dailySharp = (Math.round((dailyAvg / dailyAvgStd) * 1000000)) / 1000000.0;
-        OutputIndex stableIndex6M = new OutputIndex("STABLE6M", cumReturn, dailyAvg, dailySharp, mdd);
-        outputIndexRepository.save(stableIndex6M);
+        StableOutputIndex stableIndex6M = new StableOutputIndex("STABLE6M", cumReturn, dailyAvg, dailySharp, mdd);
+        stableOutputIndexRepository.save(stableIndex6M);
     }
 
     // 3M data 가공
@@ -642,9 +671,29 @@ public class DataService {
         // 표준편차 구할때는 dataSize-1 이 됐다. 아마 표본이라 그런듯?
         double dailyAvgStd = (Math.round((Math.sqrt((sumOfDailyReturnSquare / (dataSize - 1)) - (dailyAvg * dailyAvg))) * 1000000)) / 1000000.0;
         double dailySharp = (Math.round((dailyAvg / dailyAvgStd) * 1000000)) / 1000000.0;
-        OutputIndex stableIndex3M = new OutputIndex("STABLE3M", cumReturn, dailyAvg, dailySharp, mdd);
-        outputIndexRepository.save(stableIndex3M);
+        StableOutputIndex stableIndex3M = new StableOutputIndex("STABLE3M", cumReturn, dailyAvg, dailySharp, mdd);
+        stableOutputIndexRepository.save(stableIndex3M);
     }
+
+    @Transactional
+    public void momentumDataDelete() throws ParseException {
+        System.out.println("데이터삭제 함수 실행");
+        momentumDataAllRepository.truncateMomentumDataAll();
+        momentumData1YRepository.truncateMomentumData1Y();
+        momentumData6MRepository.truncateMomentumData6M();
+        momentumData3MRepository.truncateMomentumData3M();
+        momentumOutputIndexRepository.truncateMomentumOutputIndex();
     }
+
+    @Transactional
+    public void stableDataDelete() throws ParseException {
+        System.out.println("데이터삭제 함수 실행");
+        stableDataAllRepository.truncateStableDataAll();
+        stableData1YRepository.truncateStableData1Y();
+        stableData6MRepository.truncateStableData6M();
+        stableData3MRepository.truncateStableData3M();
+        stableOutputIndexRepository.truncateStableOutputIndex();
+    }
+}
 
 

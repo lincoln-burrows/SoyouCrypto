@@ -28,10 +28,7 @@ import java.util.List;
 @RestController
 public class ExcelController {
 
-    private final ExcelDataRepository excelDataRepository;
-    private final ExcelDataRepository2 excelDataRepository2;
     private final DataService dataService;
-    private final CsvDataRepository csvDataRepository;
     private final MomentumDataAllRepository momentumDataAllRepository;
     private final MomentumData1YRepository momentumData1YRepository;
     private final MomentumData6MRepository momentumData6MRepository;
@@ -43,18 +40,14 @@ public class ExcelController {
 
     @Autowired
     public ExcelController(
-            ExcelDataRepository excelDataRepository, ExcelDataRepository2 excelDataRepository2,
-            DataService dataService, CsvDataRepository csvDataRepository,
+             DataService dataService,
             MomentumDataAllRepository momentumDataAllRepository, MomentumData1YRepository momentumData1YRepository,
             MomentumData3MRepository momentumData3MRepository, MomentumData6MRepository momentumData6MRepository,
             StableDataAllRepository stableDataAllRepository, StableData1YRepository stableData1YRepository,
             StableData6MRepository stableData6MRepository, StableData3MRepository stableData3MRepository
 
     ) {
-        this.excelDataRepository = excelDataRepository;
         this.dataService = dataService;
-        this.excelDataRepository2 = excelDataRepository2;
-        this.csvDataRepository = csvDataRepository;
         this.momentumDataAllRepository = momentumDataAllRepository;
         this.momentumData1YRepository = momentumData1YRepository;
         this.momentumData6MRepository = momentumData6MRepository;
@@ -67,7 +60,6 @@ public class ExcelController {
 
     @GetMapping("/momentum/graph")
     public Object getMomentumGraphData(@RequestParam String type) {
-        System.out.println("그래프 데이터 요청은 들어오나?");
         return dataService.getMomentumGraphData(type);
     }
 
@@ -77,71 +69,19 @@ public class ExcelController {
     }
 
 
-//    @GetMapping("/graphData3")
-//    public List<MomentumDataAll> giveData3() {
-//
-//        return dataService.graphTries2();
-//    }
-
-    // 엑셀파일 업로드
-    @PostMapping("/excel/read2")
-    public String readExcel2(@RequestParam("file") MultipartFile file, Model model)
-            throws IOException { // 2
-        System.out.println("api 호출 성공");
-
-        List<ExcelData2> dataList = new ArrayList<>();
-
-        String extension = FilenameUtils.getExtension(file.getOriginalFilename()); // 3
-
-        if (!extension.equals("xlsx") && !extension.equals("xls")) {
-            throw new IOException("엑셀파일만 업로드 해주세요.");
-        }
-
-        Workbook workbook = null;
-
-        if (extension.equals("xlsx")) {
-            workbook = new XSSFWorkbook(file.getInputStream());
-        } else if (extension.equals("xls")) {
-            workbook = new HSSFWorkbook(file.getInputStream());
-        }
-
-        Sheet worksheet = workbook.getSheetAt(0);
-
-        for (int i = 1; i < worksheet.getPhysicalNumberOfRows(); i++) { // 4
-
-            Row row = worksheet.getRow(i);
-            if(null == row) {
-                continue;
-            }
-            ExcelData2 data = new ExcelData2();
-
-
-            if(null != row.getCell(0)){
-                data.setDate(row.getCell(0).getStringCellValue());}
-            if(null != row.getCell(1)){
-                data.setTerminal_price(row.getCell(1).getStringCellValue());}
-            if(null != row.getCell(2)){
-                data.setOpening_price(row.getCell(2).getStringCellValue());}
-            if(null != row.getCell(3)){
-                data.setTransactions(row.getCell(3).getStringCellValue());}
-            if(null != row.getCell(4)){
-                data.setChanges(row.getCell(4).getStringCellValue());}
-
-            dataList.add(data);
-            excelDataRepository2.save(data);
-        }
-
-        model.addAttribute("datas", dataList); // 5
-
-        return "excelList";
-
-    }
 
     // 그래프 밑에 출력되는 인덱스 호출 (공통)
     @GetMapping("/momentum/index")
-    public OutputIndex getPortfolioIndex(@RequestParam String type) {
+    public MomentumOutputIndex getMomentumPortfolioIndex(@RequestParam String type) {
         System.out.println("type 잘 넘어옴?"+type);
-        return dataService.getPortfolioIndex(type);
+        return dataService.getMomentumPortfolioIndex(type);
+    }
+
+    @GetMapping("/stable/index")
+    public StableOutputIndex getStablePortfolioIndex(@RequestParam String type) {
+        System.out.println("type 잘 넘어옴?"+type);
+        System.out.println("왜 다음 서비스단으로 안넘어감?");
+        return dataService.getStablePortfolioIndex(type);
     }
 
     // csv momentumAll 업로드
@@ -314,6 +254,16 @@ public class ExcelController {
     @DeleteMapping("/momentum/dataTrim3M")
     public void momentumDataTrim3M() throws ParseException {
         dataService.momentumDataTrim3M();
+    }
+
+    @DeleteMapping("/momentum/dataDelete")
+    public void momentumDataDelete() throws ParseException {
+        dataService.momentumDataDelete();
+    }
+
+    @DeleteMapping("/stable/dataDelete")
+    public void stableDataDelete() throws ParseException {
+        dataService.stableDataDelete();
     }
 
     // Stable 업로드
